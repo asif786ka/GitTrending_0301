@@ -1,0 +1,44 @@
+<resources>
+    <string name="app_name">GitHubTrending</string>
+    <string name="title_app">GitHub Trending Repos</string>
+
+    <!-- error -->
+    <string name="error_message_network">Network error</string>
+    <string name="error_repositories">Error while loading repositories</string>
+    <string name="error_users">Error while loading users</string>
+    <string name="error_not_login">Please login!</string>
+
+    <!-- msg -->
+    <string name="msg_win">win</string>
+
+    <string name="msg_retry">Click to reload</string>
+    <string name="msg_loading_end">Already ended</string>
+    <string name="msg_loading">Loading...</string>
+    <!-- title -->
+    <string name="title_username">username</string>
+    <string name="title_email">email</string>
+    <string name="title_home">Home</string>
+    <string name="title_user">Famous user</string>
+    <string name="title_repo">Hot repo</string>
+    <string name="title_daily">Today</string>
+    <string name="title_weekly">This Week</string>
+    <string name="title_monthly">This Month</string>
+
+    <string name="title_star">star: %1$d</string>
+    <string name="title_fork">fork: %1$d</string>
+
+    <string name="title_following">Following(%1$d)</string>
+    <string name="title_followers">Followers(%1$d)</string>
+    <!-- action -->
+    <string name="action_enter">Enter</string>
+    <string name="action_settings">Settings</string>
+
+    <!-- dialogs -->
+
+    <!-- menu -->
+    <string name="menu_title_user">@string/title_user</string>
+    <string name="menu_title_repo">@string/title_repo</string>
+    <string name="menu_title_trending">Trending</string>
+    <string name="menu_title_about">About</string>
+
+</resources>
