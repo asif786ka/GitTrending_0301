@@ -1,0 +1,218 @@
+apply plugin: 'com.android.application'
+apply plugin: 'com.neenbedankt.android-apt'
+apply plugin: 'com.fernandocejas.frodo'
+apply plugin: 'build-time-tracker'
+apply plugin: 'bugly'
+apply plugin: 'com.github.kt3k.coveralls'
+apply plugin: 'com.google.gms.google-services'
+
+apply from: '../config/quality/quality.gradle'
+apply from: '../buildsystem/artifacts.gradle'
+apply from: '../buildsystem/jacoco.gradle'
+
+buildtimetracker {
+    reporters {
+        csv {
+            output "build/times.csv"
+            append true
+            header false
+        }
+
+        summary {
+            ordered false
+            threshold 50
+            barstyle "unicode"
+        }
+
+        csvSummary {
+            csv "build/times.csv"
+        }
+    }
+}
+
+//bugly
+bugly {
+    appId = BUGLY_APPID
+    appKey = BUGLY_APPKEY
+}
+
+coveralls {
+    jacocoReportPath = "${project.buildDir}/reports/jacoco/testInternalDebugUnitTestCoverage/testInternalDebugUnitTestCoverage.xml"
+}
+
+def versionMajor = 1
+def versionMinor = 0
+def versionPatch = 0
+def versionBuild = 1 // bump for dogfood builds, public betas, etc.
+
+def isCi = "true".equals(System.getenv("CI"))
+def preDexEnabled = "true".equals(System.getProperty("pre-dex", "true"))
+
+android {
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
+    defaultConfig {
+        applicationId "com.githubrepo.trendingandroid"
+        minSdkVersion rootProject.ext.minSdk
+        targetSdkVersion rootProject.ext.targetSdk
+
+        // Major -> Millions, Minor -> Thousands, Bugfix -> Hundreds. E.g 1.3.72 == 1,003,072
+        versionName "${versionMajor}.${versionMinor}.${versionPatch}"
+        versionCode versionMajor * 10000 + versionMinor * 1000 + versionPatch * 100 + versionBuild
+
+        buildConfigField "String", "BUGLY_APPID", "\"${BUGLY_APPID}\""
+
+        manifestPlaceholders = [bugly_appid: "${BUGLY_APPID}",
+                                app_version: "${versionName}",
+                                app_channel: "internal"]
+    }
+
+    signingConfigs {
+        // You must set up an environment var before release signing
+        release {
+            storeFile file("${monkeyAppKeystoreReleaseLocation}")
+            keyAlias "${monkeyAppReleaseKeyAlias}"
+            storePassword "${monkeyAppReleaseStorePassword}"
+            keyPassword "${monkeyAppReleaseKeyPassword}"
+        }
+
+        debug {
+            storeFile file("${monkeyAppKeystoreDebugLocation}")
+            keyAlias "${monkeyAppDebugKeyAlias}"
+            storePassword "${monkeyAppDebugStorePassword}"
+            keyPassword "${monkeyAppDebugKeyPassword}"
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+            ndk {
+                abiFilters 'armeabi'//, 'x86'//, 'armeabi-v7a', 'x86_64', 'arm64-v8a'
+            }
+
+            resValue "string", "banner_ad_unit_id", "${BANNER_AD_UNIT_ID_RELEASE}"
+        }
+
+        debug {
+            signingConfig signingConfigs.debug
+            ndk {
+                abiFilters 'armeabi', 'x86'//, 'armeabi-v7a', 'x86_64', 'arm64-v8a'
+            }
+            testCoverageEnabled = true
+            resValue "string", "banner_ad_unit_id", "${BANNER_AD_UNIT_ID_DEBUG}"
+        }
+    }
+
+    productFlavors {
+        internal {
+            manifestPlaceholders = [app_channel: "internal"]
+        }
+
+        yingyongbao {
+            manifestPlaceholders = [app_channel: "yingyongbao"]
+        }
+
+        xiaomi {
+            manifestPlaceholders = [app_channel: "xiaomi"]
+        }
+
+        googleplay{
+            manifestPlaceholders = [app_channel: "googleplay"]
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility rootProject.ext.javaSourceCompatibility
+        targetCompatibility rootProject.ext.javaTargetCompatibility
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+
+    packagingOptions {
+        exclude 'META-INF/services/javax.annotation.processing.Processor'
+    }
+
+    //http://g.co/androidstudio/not-mocked
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
+    dexOptions {
+        // Skip pre-dexing when running on Travis CI or when disabled via -Dpre-dex=false.
+        preDexLibraries = preDexEnabled && !isCi
+    }
+}
+
+dependencies {
+    def supportDependencies = rootProject.ext.supportDependencies
+    def injectDependencies = rootProject.ext.injectDependencies
+    def httpDependencies = rootProject.ext.httpDependencies
+    def rxDependencies = rootProject.ext.rxDependencies
+    def utilDependencies = rootProject.ext.utilDependencies
+    def analysisDependencies = rootProject.ext.analysisDependencies
+    def profitDependencies = rootProject.ext.profitDependencies
+
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile project(':mvp')
+
+    //support
+    compile supportDependencies.appcompat
+    compile supportDependencies.design
+    compile supportDependencies.recyclerview
+    compile supportDependencies.cardView
+
+    // rx
+    compile rxDependencies.rxjava
+    compile rxDependencies.rxandroid
+//    compile rxDependencies.rxPreferences
+
+    // inject
+    compile injectDependencies.butterknife
+    // dagger2
+    compile injectDependencies.dagger
+    apt injectDependencies.daggerCompiler
+    compile injectDependencies.javaxAnnotation
+
+    compile httpDependencies.retrofit
+    compile httpDependencies.converterGson
+    compile httpDependencies.adapterRxjava
+
+    compile httpDependencies.glide
+    compile httpDependencies.glideOkHttp
+
+    compile httpDependencies.okhttp
+    compile httpDependencies.loggingInterceptor
+
+    compile utilDependencies.sqlbrite
+    compile utilDependencies.stetho
+    // log
+    compile utilDependencies.timber
+
+    //widget
+    compile uiWidgetDependencies.circleImageView
+    compile uiWidgetDependencies.ultraPtr
+    compile uiWidgetDependencies.aboutit
+    compile uiWidgetDependencies.aboutitMeta
+    compile uiWidgetDependencies.awesomeSplash
+
+    //analysis
+    compile analysisDependencies.buglyUpgrade
+
+    compile profitDependencies.fireBaseAds
+    // Test
+    testCompile injectDependencies.dagger
+    testCompile injectDependencies.javaxAnnotation
+    testCompile domainTestDependencies.junit
+    testCompile domainTestDependencies.mockito
+    testCompile domainTestDependencies.robolectric
+
+    testApt injectDependencies.daggerCompiler
+}
